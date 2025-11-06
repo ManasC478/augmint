@@ -11,5 +11,6 @@ bun install
 
 ### Run the development server
 ```
+cd client
 bun run dev
 ```
