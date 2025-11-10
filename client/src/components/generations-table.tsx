@@ -1,33 +1,29 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Label } from "@/components/ui/label"
+import { GetJobs } from '@/api/jobs'
+import type { Job } from "@/types"
 
-interface Job {
-  _id: string
-  jobId: string
-  tenantId: string
-  status: string
-  createdAt: Date
-  startedAt: Date | null
-  completedAt: Date | null
-  latencyMs: number | null
-  personImageKey: string
-  garmentImageKey: string
-  resultKey: string | null
-  fileSizeBytes: number
-  error: string | null
-}
-
-interface JobsTableProps {
-  jobs: Job[]
-}
-
-export function JobsTable({ jobs }: JobsTableProps) {
+export function JobsTable() {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [startDate, setStartDate] = useState<string>("")
   const [endDate, setEndDate] = useState<string>("")
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    GetJobs().then((data) => {
+      setJobs(data)
+    }).catch((error) => {
+      console.error(error)
+      setError(error.message)
+    }).finally(() => {
+      setLoading(false)
+    })
+  }, [])
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
@@ -132,7 +128,7 @@ export function JobsTable({ jobs }: JobsTableProps) {
               <TableHead className="text-muted-foreground font-medium">Status</TableHead>
               <TableHead className="text-muted-foreground font-medium">Created</TableHead>
               <TableHead className="text-muted-foreground font-medium">Latency</TableHead>
-              <TableHead className="text-muted-foreground font-medium">Size</TableHead>
+              <TableHead className="text-muted-foreground font-medium">Image Size</TableHead>
               <TableHead className="text-muted-foreground font-medium">Error</TableHead>
             </TableRow>
           </TableHeader>
@@ -146,10 +142,10 @@ export function JobsTable({ jobs }: JobsTableProps) {
             ) : (
               filteredJobs.map((job) => (
                 <TableRow key={job._id} className="border-border hover:bg-muted/30">
-                  <TableCell className="font-mono text-xs">{job.jobId.substring(0, 12)}...</TableCell>
+                  <TableCell className="font-mono text-xs">{job._id}...</TableCell>
                   <TableCell>{getStatusBadge(job.status)}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {job.createdAt.toLocaleDateString("en-US", {
+                    {new Date(job.createdAt).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                       hour: "2-digit",

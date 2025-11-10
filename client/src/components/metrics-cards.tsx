@@ -1,52 +1,72 @@
-interface Job {
-  status: string
-  latencyMs: number | null
-  fileSizeBytes: number
-}
+import { GetJobsMetrics } from "@/api/jobs";
+import type { JobMetrics } from "@/types";
+import clsx from "clsx";
+import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
-interface MetricsCardsProps {
-  jobs: Job[]
-}
+export function MetricsCards() {
+  const [metrics, setMetrics] = useState<JobMetrics | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-export function MetricsCards({ jobs }: MetricsCardsProps) {
-  // Calculate metrics from jobs
-  const totalJobs = jobs.length
-  const successJobs = jobs.filter((j) => j.status === "SUCCESS").length
-  const failedJobs = jobs.filter((j) => j.status === "FAILED").length
-  const processingJobs = jobs.filter((j) => j.status === "PROCESSING").length
-  const pendingJobs = jobs.filter((j) => j.status === "PENDING").length
+  useEffect(() => {
+    GetJobsMetrics()
+      .then((data) => {
+        setMetrics(data);
+      })
+      .catch((error) => {
+        console.error(error);
+        setError(error.message);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
 
-  const completedJobs = jobs.filter((j) => j.latencyMs !== null)
-  const avgLatencyMs =
-    completedJobs.length > 0 ? completedJobs.reduce((sum, j) => sum + (j.latencyMs || 0), 0) / completedJobs.length : 0
-
-  const totalStorageBytes = jobs.reduce((sum, j) => sum + j.fileSizeBytes, 0)
-  const totalStorageMB = (totalStorageBytes / (1024 * 1024)).toFixed(2)
-
-  const metrics = [
-    { label: "Total", value: totalJobs },
-    { label: "Success", value: successJobs, color: "text-emerald-400" },
-    { label: "Failed", value: failedJobs, color: "text-red-400" },
-    { label: "Processing", value: processingJobs, color: "text-blue-400" },
-    { label: "Pending", value: pendingJobs, color: "text-amber-400" },
-    { label: "Avg Latency", value: `${(avgLatencyMs / 1000).toFixed(2)}s` },
-    { label: "Storage", value: `${totalStorageMB} MB` },
-  ]
+  const metricCards = [
+    { label: "Total", value: metrics?.totalJobs, color: "text-foreground" },
+    {
+      label: "Success",
+      value: metrics?.successJobs,
+      color: "text-emerald-400",
+    },
+    { label: "Failed", value: metrics?.failedJobs, color: "text-red-400" },
+    {
+      label: "Processing",
+      value: metrics?.processingJobs,
+      color: "text-blue-400",
+    },
+    { label: "Pending", value: metrics?.pendingJobs, color: "text-amber-400" },
+    {
+      label: "Avg Latency",
+      value: `${metrics?.avgLatencyS}s`,
+    },
+    { label: "Storage", value: `${metrics?.totalStorageMB} MB` },
+  ];
 
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-medium mb-1">Metrics</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-        {metrics.map((metric, index) => (
-          <div key={index} className="p-4 rounded-lg bg-card border border-border">
-            <div className="text-xs text-muted-foreground mb-1">{metric.label}</div>
-            <div className={`text-2xl font-semibold tabular-nums ${metric.color || "text-foreground"}`}>
-              {metric.value}
+        {metricCards.map((metric, index) => (
+          <div
+            key={index}
+            className="p-4 rounded-lg bg-card border border-border"
+          >
+            <div className="text-xs text-muted-foreground mb-1">
+              {metric.label}
+            </div>
+            <div
+              className={clsx(
+                "text-2xl font-semibold tabular-nums",
+                metric.color,
+              )}
+            >
+              {metric ? metric.value : <Skeleton className="h-4 w-[200px]" />}
             </div>
           </div>
         ))}
       </div>
     </div>
-  )
+  );
 }
-

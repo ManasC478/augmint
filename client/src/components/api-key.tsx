@@ -1,101 +1,111 @@
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Check, Copy, Eye, EyeOff } from "lucide-react";
+import { UpdateApiKey } from "@/api/me";
+import { toast } from "sonner";
+import { Spinner } from "./ui/spinner";
 
-export function ApiKeySection() {
-  const [apiKey, setApiKey] = useState<string | null>(null)
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-  const [hasExistingKey, setHasExistingKey] = useState(true)
+export default function ApiKey() {
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const generateApiKey = () => {
-    const newKey = `sk_live_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
-    setApiKey(newKey)
-    setHasExistingKey(true)
-    setShowConfirmDialog(false)
-  }
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-  const handleGenerateClick = () => {
-    if (hasExistingKey) {
-      setShowConfirmDialog(true)
-    } else {
-      generateApiKey()
-    }
-  }
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-  const copyToClipboard = () => {
-    if (apiKey) {
-      navigator.clipboard.writeText(apiKey)
-    }
-  }
+    const key = `sk_live_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+    setApiKey(key);
+    setShowApiKey(true);
+    setIsLoading(true);
+
+    UpdateApiKey(apiKey || "")
+      .then(() => {
+        toast.success("API key updated");
+      })
+      .catch((error) => {
+        console.error(error);
+        toast.error("Failed to update API key");
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
 
   return (
-    <>
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-lg font-medium mb-1">API Key</h2>
-          <p className="text-sm text-muted-foreground">Manage your API authentication key</p>
-        </div>
+    <section>
+      <h2 className="text-lg font-medium mb-6">API Key</h2>
+      <form
+        className="bg-card border border-border/50 rounded-lg p-6 space-y-4 shadow-card hover:shadow-card-hover transition-shadow"
+        onSubmit={handleSubmit}
+      >
+        <p className="text-sm text-muted-foreground">
+          Your API key is used to authenticate requests to the API. Keep it
+          secure and never share it publicly.
+        </p>
 
         {apiKey ? (
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <Input type="text" value={apiKey} readOnly className="font-mono text-sm bg-card border-border h-10" />
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 p-4 bg-primary/5 border border-primary/30 rounded-lg shadow-glow-primary">
+              <code className="flex-1 text-sm font-mono text-foreground">
+                {showApiKey ? apiKey : "sk_live_" + "•".repeat(32)}
+              </code>
               <Button
-                onClick={copyToClipboard}
-                variant="outline"
-                className="border-border bg-card hover:bg-card/80 px-4"
+                variant="ghost"
+                type="button"
+                size="sm"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all"
               >
-                Copy
+                {showApiKey ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                type="button"
+                size="sm"
+                onClick={() => copyToClipboard(apiKey)}
+                className="text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all"
+              >
+                {copied ? (
+                  <Check className="w-4 h-4" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
               </Button>
             </div>
-            <p className="text-xs text-amber-400/90">Save this key now. You won't be able to see it again.</p>
+            <p className="text-xs text-amber-500">
+              Make sure to copy your API key now. You won't be able to see it
+              again!
+            </p>
           </div>
         ) : (
-          <div className="flex items-center justify-between p-4 rounded-lg bg-card border border-border">
-            <p className="text-sm text-muted-foreground">
-              {hasExistingKey ? "You have an active API key" : "No API key generated"}
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="flex-1 p-4 bg-muted/30 border border-border/50 rounded-lg shadow-sm">
+              <code className="text-sm font-mono text-muted-foreground">
+                sk_live_••••••••••••••••••••••••••••••••
+              </code>
+            </div>
             <Button
-              onClick={handleGenerateClick}
               size="sm"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              disabled={isLoading}
+              className="bg-primary hover:bg-primary/90 shadow-glow-primary hover:shadow-glow-primary-strong transition-all"
             >
-              {hasExistingKey ? "Regenerate" : "Generate Key"}
+              {isLoading && <Spinner />}
+              Generate New Key
             </Button>
           </div>
         )}
-      </div>
-
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent className="border-border bg-card">
-          <DialogHeader>
-            <DialogTitle>Regenerate API Key?</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              This will invalidate your current API key. Any applications using the old key will stop working.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmDialog(false)} className="border-border">
-              Cancel
-            </Button>
-            <Button
-              onClick={generateApiKey}
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-            >
-              Regenerate
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  )
+      </form>
+    </section>
+  );
 }
-
