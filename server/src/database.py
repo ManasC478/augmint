@@ -5,4 +5,5 @@ def connect_to_database(app):
     app.db = app.mongo_client.get_database(app.config["MONGO_DB_NAME"])
     app.db.sessions.create_index("expiresAt", expireAfterSeconds=0)
     app.db.jobs.create_index("tenantId")
-    app.db.tenants.create_index("email")
+    app.db.tenants.create_index("email", unique=True)
+    app.db.tenants.create_index("apiKeyHash", unique=True)

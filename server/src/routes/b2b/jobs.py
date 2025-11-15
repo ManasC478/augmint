@@ -1,7 +1,8 @@
-from flask import Blueprint, request, current_app, jsonify
+from flask import Blueprint, current_app, jsonify
 from typing import List
 from src.types.job import Job, JobMetrics
-from src.routes.auth.middleware import login_required, tenant_required
+from src.routes.auth.middleware import login_required
+from .middleware import tenant_required
 from src.types.tenant import Tenant
 from flask import g
 

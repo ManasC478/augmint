@@ -1,7 +1,9 @@
 from flask import Blueprint, current_app, jsonify, g, request
-from src.routes.auth.middleware import login_required, tenant_required
+from src.routes.auth.middleware import login_required
+from .middleware import tenant_required
 from src.types.tenant import Tenant
-import bcrypt
+import hmac
+import hashlib
 
 bp = Blueprint("me", __name__, url_prefix="/me")
 
@@ -52,8 +54,9 @@ def update_security():
 def update_api_key():
     user: Tenant = g.tenant
     apiKey = request.json["apiKey"]
-    hashed = bcrypt.hashpw(apiKey.encode("utf-8"), bcrypt.gensalt())
-    apiKeyHash = hashed.decode("utf-8")
+    print(apiKey)
+    apiKeyHash = hmac.new(current_app.config["HASH_SALT"].encode(
+        "utf-8"), apiKey.encode("utf-8"), hashlib.sha256).hexdigest()
     current_app.db.tenants.update_one(
         {"_id": user["_id"]}, {"$set": {"apiKeyHash": apiKeyHash}})
     return '', 204

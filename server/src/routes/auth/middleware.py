@@ -35,12 +35,3 @@ def login_required(f):
         return f(*args, **kwargs)
 
     return wrapper
-
-
-def tenant_required(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if not hasattr(g, "tenant") or g.tenant is None:
-            return jsonify({"error": "Tenant access only"}), 403
-        return f(*args, **kwargs)
-    return wrapper

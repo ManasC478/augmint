@@ -24,8 +24,7 @@ export default function ApiKey() {
     setApiKey(key);
     setShowApiKey(true);
     setIsLoading(true);
-
-    UpdateApiKey(apiKey || "")
+    UpdateApiKey(key || "")
       .then(() => {
         toast.success("API key updated");
       })
