@@ -1,56 +1,92 @@
-import { useState, useMemo, useEffect } from "react"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Label } from "@/components/ui/label"
-import { GetJobs } from '@/api/jobs'
-import type { Job } from "@/types"
+import { useState, useMemo, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Label } from "@/components/ui/label";
+import { GetJobs } from "@/api/jobs";
+import type { Job } from "@/types";
+import { Button } from "./ui/button";
+import JobImageDialog from "./job-image-dialog";
+import { RefreshCw } from "lucide-react";
 
 export function JobsTable() {
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [startDate, setStartDate] = useState<string>("")
-  const [endDate, setEndDate] = useState<string>("")
-  const [jobs, setJobs] = useState<Job[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    GetJobs().then((data) => {
-      setJobs(data)
-    }).catch((error) => {
-      console.error(error)
-      setError(error.message)
-    }).finally(() => {
-      setLoading(false)
-    })
-  }, [])
+    GetJobs()
+      .then((data) => {
+        setJobs(data);
+      })
+      .catch((error) => {
+        console.error(error);
+        setError(error.message);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  const handleRefreshJobs = () => {
+    setLoading(true);
+    setSelectedJob(null);
+    GetJobs()
+      .then((data) => {
+        setJobs(data);
+      })
+      .catch((error) => {
+        console.error(error);
+        setError(error.message);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
       // Status filter
       if (statusFilter !== "all" && job.status !== statusFilter) {
-        return false
+        return false;
       }
 
       // Date range filter
       if (startDate) {
-        const start = new Date(startDate)
+        const start = new Date(startDate);
         if (job.createdAt < start) {
-          return false
+          return false;
         }
       }
 
       if (endDate) {
-        const end = new Date(endDate)
-        end.setHours(23, 59, 59, 999) // Include the entire end date
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999); // Include the entire end date
         if (job.createdAt > end) {
-          return false
+          return false;
         }
       }
 
-      return true
-    })
-  }, [jobs, statusFilter, startDate, endDate])
+      return true;
+    });
+  }, [jobs, statusFilter, startDate, endDate]);
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -58,7 +94,7 @@ export function JobsTable() {
       FAILED: "text-red-400 bg-red-400/10",
       PROCESSING: "text-blue-400 bg-blue-400/10",
       PENDING: "text-amber-400 bg-amber-400/10",
-    }
+    };
 
     return (
       <span
@@ -66,8 +102,8 @@ export function JobsTable() {
       >
         {status.toLowerCase()}
       </span>
-    )
-  }
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -118,31 +154,77 @@ export function JobsTable() {
             className="border-border bg-card h-9"
           />
         </div>
+        <Button
+          variant="outline"
+          className="text-sm"
+          size="icon"
+          onClick={handleRefreshJobs}
+        >
+          <RefreshCw className="w-4 h-4" />
+        </Button>
       </div>
 
       <div className="rounded-lg border border-border overflow-hidden bg-card">
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-muted-foreground font-medium">Job ID</TableHead>
-              <TableHead className="text-muted-foreground font-medium">Status</TableHead>
-              <TableHead className="text-muted-foreground font-medium">Created</TableHead>
-              <TableHead className="text-muted-foreground font-medium">Latency</TableHead>
-              <TableHead className="text-muted-foreground font-medium">Image Size</TableHead>
-              <TableHead className="text-muted-foreground font-medium">Error</TableHead>
+              <TableHead className="text-muted-foreground font-medium">
+                Job ID
+              </TableHead>
+              <TableHead className="text-muted-foreground font-medium">
+                Status
+              </TableHead>
+              <TableHead className="text-muted-foreground font-medium">
+                Created
+              </TableHead>
+              <TableHead className="text-muted-foreground font-medium">
+                Latency
+              </TableHead>
+              <TableHead className="text-muted-foreground font-medium">
+                Image Size
+              </TableHead>
+              <TableHead className="text-muted-foreground font-medium">
+                Error
+              </TableHead>
+              <TableHead className="text-muted-foreground font-medium"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredJobs.length === 0 ? (
+            {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-12">
+                <TableCell
+                  colSpan={7}
+                  className="text-center text-muted-foreground"
+                >
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="text-center text-red-400"
+                >
+                  Error: {error}
+                </TableCell>
+              </TableRow>
+              
+            ) : filteredJobs.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  className="text-center text-muted-foreground py-12"
+                >
                   No jobs found
                 </TableCell>
               </TableRow>
             ) : (
               filteredJobs.map((job) => (
-                <TableRow key={job._id} className="border-border hover:bg-muted/30">
-                  <TableCell className="font-mono text-xs">{job._id}...</TableCell>
+                <TableRow
+                  key={job._id}
+                  className="border-border hover:bg-muted/30"
+                >
+                  <TableCell className="font-mono text-xs">{job._id}</TableCell>
                   <TableCell>{getStatusBadge(job.status)}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {new Date(job.createdAt).toLocaleDateString("en-US", {
@@ -153,19 +235,39 @@ export function JobsTable() {
                     })}
                   </TableCell>
                   <TableCell className="text-sm tabular-nums">
-                    {job.latencyMs ? `${(job.latencyMs / 1000).toFixed(2)}s` : "—"}
+                    {job.latencyMs
+                      ? `${(job.latencyMs / 1000).toFixed(2)}s`
+                      : "—"}
                   </TableCell>
                   <TableCell className="text-sm tabular-nums">
-                    {job.fileSizeBytes > 0 ? `${(job.fileSizeBytes / (1024 * 1024)).toFixed(1)} MB` : "—"}
+                    {job.fileSizeBytes > 0
+                      ? `${(job.fileSizeBytes / (1024 * 1024)).toFixed(1)} MB`
+                      : "—"}
                   </TableCell>
-                  <TableCell className="text-sm text-red-400">{job.error || "—"}</TableCell>
+                  <TableCell className="text-sm text-red-400">
+                    {job.error || "—"}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    <Button
+                      variant="ghost"
+                      className="text-sm"
+                      onClick={() => setSelectedJob(job)}
+                    >
+                      View
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
+      {selectedJob && (
+        <JobImageDialog
+          job={selectedJob}
+          onClose={() => setSelectedJob(null)}
+        />
+      )}
     </div>
-  )
+  );
 }
-
