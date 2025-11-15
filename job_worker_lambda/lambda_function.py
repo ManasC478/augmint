@@ -47,15 +47,25 @@ def lambda_handler(event, context):
                 }
             )
 
-            if result["matchedCount"] == 0:
+            logger.info(f"MongoDB result: {result}")
+            if result.modified_count == 0:
                 raise Exception(f"ERROR: Job {job_id} not found in MongoDB.")
 
             logger.info(f"SUCCESS: Job {job_id} updated to PROCESSING.")
 
             delete_message_from_queue(record["receiptHandle"])
         except Exception as e:
+            db.jobs.update_one(
+                {"_id": ObjectId(job_id)},
+                {
+                    "$set": {
+                        "status": "PENDING",
+                        "startedAt": None,
+                    }
+                }
+            )
             logger.error(
-                f"ERROR: Failed to update job {job_id} to PROCESSING: {e}")
+                f"ERROR: Failed to generate job {job_id}: {e}")
             continue
 
     return {"statusCode": 200, "body": "OK"}
