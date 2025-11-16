@@ -8,7 +8,7 @@ export const Route = createFileRoute("/dashboard/jobs")({
 
 function RouteComponent() {
   return (
-    <div>
+    <div className="space-y-5">
       <MetricsCards />
       <JobsTable />
     </div>
