@@ -34,6 +34,8 @@ def try_on():
 
         sqs_send_message(current_app.config["SQS_QUEUE_URL"], {
             "jobId": str(job_id),
+            "personImageKey": body["personImageKey"],
+            "garmentImageKey": body["garmentImageKey"],
         })
         return jsonify({"jobId": str(job_id)}), 200
     except Exception as e:
