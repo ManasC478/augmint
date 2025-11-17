@@ -1,4 +1,5 @@
 import google.oauth2.credentials
+from bson import ObjectId
 import secrets
 from datetime import datetime, timedelta
 from google_auth_oauthlib.flow import Flow
@@ -47,7 +48,8 @@ def google_callback():
         scopes=["openid", "email", "profile"],
         state=stored_state
     )
-    flow.redirect_uri = url_for('routes.auth.google.google_callback', _external=True)
+    flow.redirect_uri = url_for(
+        'routes.auth.google.google_callback', _external=True)
 
     authorization_response = request.url
     flow.fetch_token(authorization_response=authorization_response)
@@ -61,14 +63,14 @@ def google_callback():
     email = idinfo["email"]
     name = idinfo.get("name")
     picture = idinfo.get("picture")
-    google_user_id = idinfo["sub"]
 
+    user_id = ObjectId()
     if auth_type == "tenant":
         tenants = current_app.db.tenants
-        existing_tenant = tenants.find_one({"_id": google_user_id})
+        existing_tenant = tenants.find_one({"_id": user_id})
         if not existing_tenant:
             tenants.insert_one({
-                "_id": google_user_id,
+                "_id": user_id,
                 "picture": picture,
                 "tenantName": name,
                 "contactName": name,
@@ -82,14 +84,25 @@ def google_callback():
                     "allowedOrigins": []
                 }
             })
-    else:
-        pass
+    elif auth_type == "user":
+        users = current_app.db.users
+        existing_user = users.find_one({"_id": user_id})
+        if not existing_user:
+            users.insert_one({
+                "_id": user_id,
+                "picture": picture,
+                "name": name,
+                "email": email,
+                "createdAt": datetime.now(),
+                "garments": [],
+                "models": [],
+            })
 
     session_token = secrets.token_hex(32)
     expires_at = datetime.utcnow() + timedelta(days=7)
     current_app.db.sessions.insert_one({
         "_id": session_token,
-        "userId": google_user_id,
+        "userId": user_id,
         "authType": auth_type,
         "createdAt": datetime.utcnow(),
         "expiresAt": expires_at
@@ -100,6 +113,14 @@ def google_callback():
     resp.set_cookie(
         "session",
         session_token,
+        httponly=True,
+        secure=current_app.config["COOKIE_SECURE"],
+        samesite=current_app.config["COOKIE_SAMESITE"],
+        expires=expires_at
+    )
+    resp.set_cookie(
+        "auth_type",
+        auth_type,
         httponly=True,
         secure=current_app.config["COOKIE_SECURE"],
         samesite=current_app.config["COOKIE_SAMESITE"],

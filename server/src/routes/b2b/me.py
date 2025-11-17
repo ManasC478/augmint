@@ -13,6 +13,7 @@ bp = Blueprint("me", __name__, url_prefix="/me")
 @tenant_required
 def get_me():
     user: Tenant = g.tenant
+    user["_id"] = str(user["_id"])
     return jsonify(user)
 
 

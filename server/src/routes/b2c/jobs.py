@@ -2,8 +2,8 @@ from flask import Blueprint, current_app, jsonify
 from typing import List
 from src.types.job import Job, JobMetrics
 from src.routes.auth.middleware import login_required
-from .middleware import tenant_required
-from src.types.tenant import Tenant
+from .middleware import user_required
+from src.types.user import User
 from flask import g
 
 bp = Blueprint("jobs", __name__, url_prefix="/jobs")
@@ -11,12 +11,11 @@ bp = Blueprint("jobs", __name__, url_prefix="/jobs")
 
 @bp.route("/", methods=["GET"])
 @login_required
-@tenant_required
+@user_required
 def get_jobs():
-    tenant: Tenant = g.tenant
-    print(tenant)
+    user: User = g.user
     jobs: List[Job] = list(
-        current_app.db.jobs.find({"tenantId": tenant['_id']}))
+        current_app.db.jobs.find({"tenantId": user['_id']}))
     for job in jobs:
         job["_id"] = str(job["_id"])
         job["tenantId"] = str(job["tenantId"])
@@ -25,11 +24,11 @@ def get_jobs():
 
 @bp.route("/metrics", methods=["GET"])
 @login_required
-@tenant_required
+@user_required
 def get_jobs_metrics():
-    tenant: Tenant = g.tenant
+    user: User = g.user
     cursor = current_app.db.jobs.aggregate([
-        {"$match": {"tenantId": tenant['_id']}},
+        {"$match": {"tenantId": user['_id']}},
         {
             "$facet": {
                 "metrics": [{
