@@ -41,3 +41,6 @@ build/
 *.egg-info/
 
 client_secret.json
+garments/
+persons/
+glam-test.py
